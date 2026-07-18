@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ShowBuddy - Theatres</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: white; padding: 40px 60px; }
+    .logo { font-size: 24px; font-weight: 800; color: #ff4d6d; margin-bottom: 30px; }
+    h2 { margin-bottom: 24px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .theatre-card {
+      background: #16161f;
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .theatre-name { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .theatre-info { font-size: 13px; color: #999; margin: 4px 0; }
+    a { color: #ff8fa3; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <div class="logo">🎬 ShowBuddy</div>
+  <a href="index.html">← Back to Shows</a>
+  <h2 style="margin-top: 20px;">Our Theatres</h2>
+  <div id="theatre-list" class="grid">Loading theatres...</div>
+
+  <script>
+    fetch('http://localhost:8080/api/theatres')
+      .then(response => response.json())
+      .then(theatres => {
+        const container = document.getElementById('theatre-list');
+        container.innerHTML = '';
+
+        if (theatres.length === 0) {
+          container.innerHTML = '<p>No theatres available.</p>';
+          return;
+        }
+
+        theatres.forEach(theatre => {
+          const card = document.createElement('div');
+          card.className = 'theatre-card';
+          card.innerHTML = `
+            <div class="theatre-name">${theatre.name}</div>
+            <div class="theatre-info">📍 ${theatre.address}, ${theatre.city}</div>
+            <div class="theatre-info">🪑 Total Seats: ${theatre.totalSeats}</div>
+          `;
+          container.appendChild(card);
+        });
+      })
+      .catch(error => {
+        document.getElementById('theatre-list').innerHTML = 'Error loading theatres: ' + error;
+      });
+  </script>
+
+</body>
+</html>

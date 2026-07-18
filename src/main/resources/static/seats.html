@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ShowBuddy - Select Seats</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: white; padding: 30px 60px; }
+    .logo { font-size: 24px; font-weight: 800; color: #ff4d6d; margin-bottom: 10px; }
+    a.back { color: #999; text-decoration: none; font-size: 14px; }
+    #movie-info { margin: 20px 0; }
+    #movie-info h2 { font-size: 24px; margin-bottom: 6px; }
+    #movie-info p { color: #999; font-size: 14px; }
+
+    .screen {
+      background: linear-gradient(180deg, #444, transparent);
+      height: 8px; width: 60%; margin: 40px auto 30px; border-radius: 50%;
+    }
+    .screen-label { text-align: center; color: #666; font-size: 12px; margin-bottom: 30px; letter-spacing: 2px; }
+
+    .seat-map { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row-label { width: 20px; color: #666; font-size: 13px; }
+    .seat {
+      width: 34px; height: 34px; border-radius: 6px; display: flex; align-items: center;
+      justify-content: center; font-size: 11px; cursor: pointer; background: #222; border: 1px solid #444;
+      transition: all 0.15s;
+    }
+    .seat.booked { background: #444; color: #777; cursor: not-allowed; border-color: #444; }
+    .seat.selected { background: #ff4d6d; border-color: #ff4d6d; }
+    .seat:not(.booked):hover { border-color: #ff4d6d; }
+
+    .legend { display: flex; gap: 24px; justify-content: center; margin-top: 30px; font-size: 13px; color: #999; }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-box { width: 16px; height: 16px; border-radius: 4px; }
+
+    .summary {
+      max-width: 400px; margin: 40px auto 0; background: #16161f; border-radius: 14px; padding: 20px;
+    }
+    .summary-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; color: #ccc; }
+    .confirm-btn {
+      width: 100%; background: #ff4d6d; color: white; border: none; padding: 14px;
+      border-radius: 8px; font-weight: 600; margin-top: 14px; cursor: pointer; font-size: 15px;
+    }
+    .confirm-btn:hover { background: #e0405c; }
+    .confirm-btn:disabled { background: #444; cursor: not-allowed; }
+
+    #message { text-align: center; margin-top: 16px; font-weight: 500; }
+    .success { color: #6bff8f; }
+    .error { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+
+  <div class="logo">🎬 ShowBuddy</div>
+  <a class="back" href="index.html">← Back to Shows</a>
+
+  <div id="movie-info">Loading...</div>
+
+  <div class="screen"></div>
+  <div class="screen-label">SCREEN THIS WAY</div>
+
+  <div class="seat-map" id="seat-map">Loading seats...</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box" style="background:#222;border:1px solid #444;"></div> Available</div>
+    <div class="legend-item"><div class="legend-box" style="background:#ff4d6d;"></div> Selected</div>
+    <div class="legend-item"><div class="legend-box" style="background:#444;"></div> Booked</div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-row"><span>Selected Seats:</span><span id="selected-list">None</span></div>
+    <div class="summary-row"><span>Price per seat:</span><span id="price-per-seat">₹0</span></div>
+    <div class="summary-row"><span><strong>Total:</strong></span><span id="total-price"><strong>₹0</strong></span></div>
+    <button class="confirm-btn" id="confirm-btn" disabled>Select seats to continue</button>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    var params = new URLSearchParams(window.location.search);
+    var showId = params.get('showId');
+    var selectedSeats = [];
+    var pricePerSeat = 0;
+
+    if (!showId) {
+      document.body.innerHTML = '<p style="padding:40px;">Invalid show. <a href="index.html" style="color:#ff8fa3;">Go back</a></p>';
+    } else {
+      fetch('http://localhost:8080/api/shows')
+        .then(function(res) { return res.json(); })
+        .then(function(shows) {
+          var show = shows.find(function(s) { return s.id == showId; });
+          if (!show) return;
+          pricePerSeat = show.price;
+          document.getElementById('movie-info').innerHTML =
+            '<h2>' + show.movie.title + '</h2>' +
+            '<p>' + show.theatre.name + ', ' + show.theatre.city + ' | ' + new Date(show.showDateTime).toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'}) + '</p>';
+          document.getElementById('price-per-seat').innerText = '₹' + pricePerSeat;
+        });
+      loadSeats();
+    }
+
+    function loadSeats() {
+      fetch('http://localhost:8080/api/seats/show/' + showId)
+        .then(function(res) { return res.json(); })
+        .then(function(seats) {
+          var container = document.getElementById('seat-map');
+          container.innerHTML = '';
+
+          if (seats.length === 0) {
+            container.innerHTML = '<p>No seats configured for this show yet.</p>';
+            return;
+          }
+
+          var rows = {};
+          seats.forEach(function(seat) {
+            var rowLetter = seat.seatNumber.charAt(0);
+            if (!rows[rowLetter]) rows[rowLetter] = [];
+            rows[rowLetter].push(seat);
+          });
+
+          Object.keys(rows).sort().forEach(function(rowLetter) {
+            var rowDiv = document.createElement('div');
+            rowDiv.className = 'row';
+            rowDiv.innerHTML = '<div class="row-label">' + rowLetter + '</div>';
+
+            rows[rowLetter].sort(function(a, b) {
+              return parseInt(a.seatNumber.slice(1)) - parseInt(b.seatNumber.slice(1));
+            });
+
+            rows[rowLetter].forEach(function(seat) {
+              var seatDiv = document.createElement('div');
+              seatDiv.className = 'seat' + (seat.isBooked ? ' booked' : '');
+              seatDiv.innerText = seat.seatNumber.slice(1);
+              seatDiv.dataset.seatId = seat.id;
+              seatDiv.dataset.seatNumber = seat.seatNumber;
+
+              if (!seat.isBooked) {
+                seatDiv.onclick = function() { toggleSeat(seatDiv); };
+              }
+              rowDiv.appendChild(seatDiv);
+            });
+
+            container.appendChild(rowDiv);
+          });
+        });
+    }
+
+    function toggleSeat(seatDiv) {
+      var seatId = seatDiv.dataset.seatId;
+      var seatNumber = seatDiv.dataset.seatNumber;
+      var index = selectedSeats.findIndex(function(s) { return s.id == seatId; });
+
+      if (index > -1) {
+        selectedSeats.splice(index, 1);
+        seatDiv.classList.remove('selected');
+      } else {
+        selectedSeats.push({ id: seatId, number: seatNumber });
+        seatDiv.classList.add('selected');
+      }
+      updateSummary();
+    }
+
+    function updateSummary() {
+      var list = document.getElementById('selected-list');
+      var total = document.getElementById('total-price');
+      var btn = document.getElementById('confirm-btn');
+
+      if (selectedSeats.length === 0) {
+        list.innerText = 'None';
+        total.innerHTML = '<strong>₹0</strong>';
+        btn.disabled = true;
+        btn.innerText = 'Select seats to continue';
+        btn.onclick = null;
+      } else {
+        list.innerText = selectedSeats.map(function(s) { return s.number; }).join(', ');
+        var totalAmount = selectedSeats.length * pricePerSeat;
+        total.innerHTML = '<strong>₹' + totalAmount + '</strong>';
+        btn.disabled = false;
+        btn.innerText = 'Pay ₹' + totalAmount + ' & Confirm';
+        btn.onclick = startPayment;
+      }
+    }
+
+    function startPayment() {
+      var userId = localStorage.getItem('userId');
+      if (!userId) {
+        alert("Booking karne ke liye pehle login karo!");
+        window.location.href = 'login.html';
+        return;
+      }
+
+      var totalAmount = selectedSeats.length * pricePerSeat;
+
+      // Step 1: Backend se Razorpay Order banwao
+      fetch('http://localhost:8080/api/payment/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: totalAmount })
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(orderData) {
+          if (!orderData.success) {
+            document.getElementById('message').className = 'error';
+            document.getElementById('message').innerText = 'Payment order failed: ' + orderData.message;
+            return;
+          }
+
+          // Step 2: Razorpay ka payment popup kholo
+          var options = {
+            key: orderData.keyId,
+            amount: orderData.amount,
+            currency: orderData.currency,
+            name: 'ShowBuddy',
+            description: 'Movie Ticket Booking',
+            order_id: orderData.orderId,
+            handler: function(response) {
+              // Payment successful — ab booking confirm karo
+              completeBooking(userId, totalAmount);
+            },
+            prefill: {
+              name: localStorage.getItem('userName') || ''
+            },
+            theme: { color: '#ff4d6d' }
+          };
+
+          var rzp = new Razorpay(options);
+          rzp.open();
+        })
+        .catch(function(err) {
+          document.getElementById('message').className = 'error';
+          document.getElementById('message').innerText = 'Error: ' + err;
+        });
+    }
+
+    function completeBooking(userId, totalAmount) {
+      var booking = {
+        user: { id: parseInt(userId) },
+        show: { id: parseInt(showId) },
+        numberOfSeats: selectedSeats.length,
+        totalAmount: totalAmount,
+        bookingTime: new Date().toISOString().slice(0, 19),
+        status: "CONFIRMED"
+      };
+
+      fetch('http://localhost:8080/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(booking)
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var markPromises = selectedSeats.map(function(seat) {
+            return fetch('http://localhost:8080/api/seats/book/' + seat.id, { method: 'PUT' });
+          });
+          Promise.all(markPromises).then(function() {
+            var msg = document.getElementById('message');
+            msg.className = 'success';
+            msg.innerText = '✅ Payment successful! Booking ID: ' + data.id + ', Total: ₹' + data.totalAmount;
+            setTimeout(function() { window.location.href = 'index.html'; }, 2000);
+          });
+        })
+        .catch(function(err) {
+          var msg = document.getElementById('message');
+          msg.className = 'error';
+          msg.innerText = 'Booking failed: ' + err;
+        });
+    }
+  </script>
+
+</body>
+</html>

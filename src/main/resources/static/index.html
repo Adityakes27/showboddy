@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ShowBuddy - Movie Booking</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: white; }
+
+    nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 40px; position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    }
+    nav .logo { font-size: 24px; font-weight: 800; color: #ff4d6d; }
+    nav .right { display: flex; align-items: center; gap: 20px; }
+    nav a { color: white; text-decoration: none; font-size: 15px; }
+    .user-pill {
+      background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px;
+      font-size: 14px; display: flex; align-items: center; gap: 10px;
+    }
+    .logout-btn { background: none; border: none; color: #ff8fa3; cursor: pointer; font-size: 13px; }
+    .login-btn {
+      background: #ff4d6d; color: white; padding: 8px 18px; border-radius: 20px;
+      text-decoration: none; font-size: 14px; font-weight: 600;
+    }
+
+    .hero {
+      position: relative; height: 90vh; background-size: cover; background-position: center;
+      display: flex; align-items: center; padding: 0 60px;
+    }
+    .hero::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, rgba(10,10,15,0.95) 20%, rgba(10,10,15,0.4) 60%, rgba(10,10,15,0.1) 100%);
+    }
+    .hero-content { position: relative; z-index: 2; max-width: 600px; }
+    .hero-content .genre { color: #ccc; font-size: 15px; margin-bottom: 10px; }
+    .hero-content h1 { font-size: 56px; font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
+    .hero-content p { color: #ccc; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
+    .hero-content .meta { display: flex; gap: 16px; color: #bbb; font-size: 14px; margin-bottom: 20px; }
+
+    .btn-primary {
+      background: #ff4d6d; color: white; border: none;
+      padding: 14px 28px; border-radius: 30px; font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .btn-primary:hover { background: #e0405c; }
+
+    .section { padding: 50px 60px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .section h2 { font-size: 26px; }
+    .section-header a { color: #ff8fa3; text-decoration: none; font-size: 14px; }
+
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px;
+    }
+    .show-card { background: #16161f; border-radius: 14px; overflow: hidden; transition: transform 0.2s; position: relative; }
+    .show-card:hover { transform: translateY(-6px); }
+    .poster-wrap { position: relative; }
+    .poster { width: 100%; height: 300px; object-fit: cover; background: #333; display: block; }
+    .fav-btn {
+      position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6);
+      border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s;
+    }
+    .fav-btn:hover { transform: scale(1.15); }
+    .fav-btn.active { color: #ff4d6d; }
+    .fav-btn:not(.active) { color: #ccc; }
+
+    .card-body { padding: 14px; }
+    .movie-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .show-info { font-size: 12px; color: #999; margin: 3px 0; }
+    .price-tag {
+      display: inline-block; background: rgba(255,77,109,0.15); color: #ff8fa3;
+      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 8px;
+    }
+    .book-btn {
+      width: 100%; background: #ff4d6d; color: white; border: none;
+      padding: 10px; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .book-btn:hover { background: #e0405c; }
+
+    #message {
+      position: fixed; top: 20px; right: 20px; padding: 14px 20px;
+      border-radius: 10px; font-weight: 500; display: none; z-index: 100;
+    }
+    .success { background: #1e5631; display: block !important; }
+    .error { background: #7a1e1e; display: block !important; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo">🎬 ShowBuddy</div>
+    <div class="right">
+      <a href="theatres.html">Theatres</a>
+      <a href="favorites.html">❤️ My Favorites</a>
+      <div id="auth-area"></div>
+    </div>
+  </nav>
+
+  <div id="hero-section"></div>
+
+  <div class="section">
+    <div class="section-header"><h2>Now Showing</h2></div>
+    <div id="show-list" class="grid">Loading shows...</div>
+  </div>
+
+  <div id="message"></div>
+
+  <script>
+    var currentUserId = localStorage.getItem('userId');
+    var favoriteMovieIds = [];
+
+    function renderAuthArea() {
+      var userId = localStorage.getItem('userId');
+      var userName = localStorage.getItem('userName');
+      var authArea = document.getElementById('auth-area');
+
+      if (userId) {
+        authArea.innerHTML = '<div class="user-pill">👤 ' + userName + ' <button class="logout-btn" onclick="logout()">Logout</button></div>';
+      } else {
+        authArea.innerHTML = '<a class="login-btn" href="login.html">Login</a>';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('token');
+      renderAuthArea();
+    }
+
+    function bookShow(showId) {
+      var userId = localStorage.getItem('userId');
+      if (!userId) {
+        alert("Booking karne ke liye pehle login karo!");
+        window.location.href = 'login.html';
+        return;
+      }
+      window.location.href = 'seats.html?showId=' + showId;
+    }
+
+    function toggleFavorite(movieId, btnElement) {
+      if (!currentUserId) {
+        alert("Favorite karne ke liye pehle login karo!");
+        window.location.href = 'login.html';
+        return;
+      }
+
+      fetch('http://localhost:8080/api/favorites/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: parseInt(currentUserId), movieId: movieId })
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.favorited) {
+            btnElement.classList.add('active');
+            btnElement.innerText = '❤️';
+          } else {
+            btnElement.classList.remove('active');
+            btnElement.innerText = '🤍';
+          }
+        });
+    }
+
+    function loadFavoritesThenShows() {
+      if (currentUserId) {
+        fetch('http://localhost:8080/api/favorites/' + currentUserId)
+          .then(function(res) { return res.json(); })
+          .then(function(favs) {
+            favoriteMovieIds = favs.map(function(f) { return f.movie.id; });
+            loadShows();
+          })
+          .catch(function() { loadShows(); });
+      } else {
+        loadShows();
+      }
+    }
+
+    function loadShows() {
+      fetch('http://localhost:8080/api/shows')
+        .then(function(response) { return response.json(); })
+        .then(function(shows) {
+          var listContainer = document.getElementById('show-list');
+          var heroContainer = document.getElementById('hero-section');
+          listContainer.innerHTML = '';
+
+          if (shows.length === 0) {
+            listContainer.innerHTML = '<p>No shows available.</p>';
+            return;
+          }
+
+          var featured = shows[0];
+          var heroBg = featured.movie.posterUrl || '';
+          heroContainer.innerHTML =
+            '<div class="hero" style="background-image: url(\'' + heroBg + '\');">' +
+              '<div class="hero-content">' +
+                '<div class="genre">' + featured.movie.genre + ' | ' + featured.movie.language + '</div>' +
+                '<h1>' + featured.movie.title + '</h1>' +
+                '<div class="meta">' +
+                  '<span>🕒 ' + featured.movie.durationMinutes + ' min</span>' +
+                  '<span>🎭 ' + featured.theatre.name + ', ' + featured.theatre.city + '</span>' +
+                '</div>' +
+                '<p>' + featured.movie.description + '</p>' +
+                '<button class="btn-primary" onclick="bookShow(' + featured.id + ')">Book Now</button>' +
+              '</div>' +
+            '</div>';
+
+          shows.forEach(function(show) {
+            var posterUrl = show.movie.posterUrl || 'https://via.placeholder.com/300x400?text=No+Poster';
+            var dateObj = new Date(show.showDateTime);
+            var formattedTime = dateObj.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+            var isFav = favoriteMovieIds.indexOf(show.movie.id) > -1;
+
+            var card = document.createElement('div');
+            card.className = 'show-card';
+            card.innerHTML =
+              '<div class="poster-wrap">' +
+                '<img class="poster" src="' + posterUrl + '" alt="' + show.movie.title + '">' +
+                '<button class="fav-btn ' + (isFav ? 'active' : '') + '" onclick="toggleFavorite(' + show.movie.id + ', this)">' + (isFav ? '❤️' : '🤍') + '</button>' +
+              '</div>' +
+              '<div class="card-body">' +
+                '<div class="movie-title">' + show.movie.title + '</div>' +
+                '<div class="show-info">🎭 ' + show.theatre.name + '</div>' +
+                '<div class="show-info">🕒 ' + formattedTime + '</div>' +
+                '<div class="price-tag">₹' + show.price + '</div>' +
+                '<button class="book-btn" onclick="bookShow(' + show.id + ')">Book Now</button>' +
+              '</div>';
+            listContainer.appendChild(card);
+          });
+        })
+        .catch(function(error) {
+          document.getElementById('show-list').innerHTML = 'Error loading shows: ' + error;
+        });
+    }
+
+    renderAuthArea();
+    loadFavoritesThenShows();
+  </script>
+
+</body>
+</html>

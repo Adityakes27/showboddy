@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ShowBuddy - Login</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0a0a0f; color: white;
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh;
+    }
+    .box {
+      background: #16161f; padding: 40px; border-radius: 14px;
+      width: 340px;
+    }
+    .logo { font-size: 24px; font-weight: 800; color: #ff4d6d; margin-bottom: 20px; text-align: center; }
+    .tabs { display: flex; margin-bottom: 20px; }
+    .tab {
+      flex: 1; text-align: center; padding: 10px; cursor: pointer;
+      border-bottom: 2px solid #333; color: #999;
+    }
+    .tab.active { border-bottom: 2px solid #ff4d6d; color: white; font-weight: 600; }
+    input {
+      width: 100%; padding: 12px; margin-bottom: 12px;
+      background: #0a0a0f; border: 1px solid #333; border-radius: 8px;
+      color: white; font-size: 14px;
+    }
+    button {
+      width: 100%; padding: 12px; background: #ff4d6d; color: white;
+      border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px;
+    }
+    button:hover { background: #e0405c; }
+    .hidden { display: none; }
+    #message { margin-top: 12px; font-size: 13px; text-align: center; }
+    .error { color: #ff6b6b; }
+    .success { color: #6bff8f; }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <div class="logo">🎬 ShowBuddy</div>
+    <div class="tabs">
+      <div class="tab active" id="loginTab" onclick="showTab('login')">Login</div>
+      <div class="tab" id="signupTab" onclick="showTab('signup')">Sign Up</div>
+    </div>
+
+    <div id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email">
+      <input type="password" id="loginPassword" placeholder="Password">
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div id="signupForm" class="hidden">
+      <input type="text" id="signupName" placeholder="Full Name">
+      <input type="email" id="signupEmail" placeholder="Email">
+      <input type="text" id="signupPhone" placeholder="Phone">
+      <input type="password" id="signupPassword" placeholder="Password">
+      <button onclick="signup()">Sign Up</button>
+    </div>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    function showTab(tab) {
+      document.getElementById('loginTab').className = tab === 'login' ? 'tab active' : 'tab';
+      document.getElementById('signupTab').className = tab === 'signup' ? 'tab active' : 'tab';
+      document.getElementById('loginForm').className = tab === 'login' ? '' : 'hidden';
+      document.getElementById('signupForm').className = tab === 'signup' ? '' : 'hidden';
+      document.getElementById('message').innerText = '';
+    }
+
+    function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+        .then(res => res.json())
+        .then(data => {
+          const msg = document.getElementById('message');
+          if (data.success) {
+            localStorage.setItem('userId', data.userId);
+            localStorage.setItem('userName', data.name);
+            localStorage.setItem('token', data.token);
+            msg.className = 'success';
+            msg.innerText = `Welcome ${data.name}! Redirecting...`;
+            setTimeout(() => window.location.href = 'index.html', 1000);
+          } else {
+            msg.className = 'error';
+            msg.innerText = data.message;
+          }
+        })
+        .catch(err => {
+          document.getElementById('message').innerText = 'Error: ' + err;
+        });
+    }
+
+    function signup() {
+      const name = document.getElementById('signupName').value;
+      const email = document.getElementById('signupEmail').value;
+      const phone = document.getElementById('signupPhone').value;
+      const password = document.getElementById('signupPassword').value;
+
+      fetch('http://localhost:8080/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, password })
+      })
+        .then(res => res.json())
+        .then(data => {
+          const msg = document.getElementById('message');
+          if (data.success) {
+            localStorage.setItem('userId', data.userId);
+            localStorage.setItem('userName', data.name);
+            localStorage.setItem('token', data.token);
+            msg.className = 'success';
+            msg.innerText = `Account created! Redirecting...`;
+            setTimeout(() => window.location.href = 'index.html', 1000);
+          } else {
+            msg.className = 'error';
+            msg.innerText = data.message;
+          }
+        })
+        .catch(err => {
+          document.getElementById('message').innerText = 'Error: ' + err;
+        });
+    }
+  </script>
+
+</body>
+</html>
