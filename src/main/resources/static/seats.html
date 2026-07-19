@@ -86,7 +86,7 @@
     if (!showId) {
       document.body.innerHTML = '<p style="padding:40px;">Invalid show. <a href="index.html" style="color:#ff8fa3;">Go back</a></p>';
     } else {
-      fetch('http://localhost:8080/api/shows')
+      fetch('/api/shows')
         .then(function(res) { return res.json(); })
         .then(function(shows) {
           var show = shows.find(function(s) { return s.id == showId; });
@@ -101,7 +101,7 @@
     }
 
     function loadSeats() {
-      fetch('http://localhost:8080/api/seats/show/' + showId)
+      fetch('/api/seats/show/' + showId)
         .then(function(res) { return res.json(); })
         .then(function(seats) {
           var container = document.getElementById('seat-map');
@@ -193,7 +193,7 @@
       var totalAmount = selectedSeats.length * pricePerSeat;
 
       // Step 1: Backend se Razorpay Order banwao
-      fetch('http://localhost:8080/api/payment/create-order', {
+      fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: totalAmount })
@@ -243,7 +243,7 @@
         status: "CONFIRMED"
       };
 
-      fetch('http://localhost:8080/api/bookings', {
+      fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(booking)
@@ -251,7 +251,7 @@
         .then(function(res) { return res.json(); })
         .then(function(data) {
           var markPromises = selectedSeats.map(function(seat) {
-            return fetch('http://localhost:8080/api/seats/book/' + seat.id, { method: 'PUT' });
+            return fetch('/api/seats/book/' + seat.id, { method: 'PUT' });
           });
           Promise.all(markPromises).then(function() {
             var msg = document.getElementById('message');

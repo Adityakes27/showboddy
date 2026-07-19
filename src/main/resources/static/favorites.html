@@ -31,7 +31,7 @@
     if (!userId) {
       container.innerHTML = '<p>Please <a href="login.html" style="color:#ff8fa3;">login</a> to see your favorites.</p>';
     } else {
-      fetch('http://localhost:8080/api/favorites/' + userId)
+      fetch('/api/favorites/' + userId)
         .then(function(res) { return res.json(); })
         .then(function(favs) {
           container.innerHTML = '';

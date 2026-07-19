@@ -77,7 +77,7 @@
       const email = document.getElementById('loginEmail').value;
       const password = document.getElementById('loginPassword').value;
 
-      fetch('http://localhost:8080/api/auth/login', {
+      fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -108,7 +108,7 @@
       const phone = document.getElementById('signupPhone').value;
       const password = document.getElementById('signupPassword').value;
 
-      fetch('http://localhost:8080/api/auth/signup', {
+      fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, phone, password })

@@ -147,7 +147,7 @@
         return;
       }
 
-      fetch('http://localhost:8080/api/favorites/toggle', {
+      fetch('/api/favorites/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: parseInt(currentUserId), movieId: movieId })
@@ -166,7 +166,7 @@
 
     function loadFavoritesThenShows() {
       if (currentUserId) {
-        fetch('http://localhost:8080/api/favorites/' + currentUserId)
+        fetch('/api/favorites/' + currentUserId)
           .then(function(res) { return res.json(); })
           .then(function(favs) {
             favoriteMovieIds = favs.map(function(f) { return f.movie.id; });
@@ -179,7 +179,7 @@
     }
 
     function loadShows() {
-      fetch('http://localhost:8080/api/shows')
+      fetch('/api/shows')
         .then(function(response) { return response.json(); })
         .then(function(shows) {
           var listContainer = document.getElementById('show-list');
